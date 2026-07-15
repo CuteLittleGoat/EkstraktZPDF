@@ -16,7 +16,8 @@
 
         * { box-sizing: border-box; }
 
-        html, body {
+        html,
+        body {
             width: 100%;
             height: 100%;
             margin: 0;
@@ -86,6 +87,7 @@
         const storagePrefix = "ds2-sotfs-checklist:";
         const databaseName = "ds2-sotfs-checklist";
         const storeName = "progress";
+
         const tabletStyles = `
             html {
                 -webkit-text-size-adjust: 100%;
@@ -98,8 +100,22 @@
                 touch-action: pan-x pan-y;
             }
 
-            button, input, a {
+            button,
+            input,
+            a {
                 -webkit-tap-highlight-color: rgba(209, 168, 90, .22);
+            }
+
+            /*
+             * DS2.html ustawia nagłówki tabel jako sticky z top: 70px.
+             * Ponieważ tabela znajduje się w kontenerze z overflow-x: auto,
+             * nagłówek jest przesuwany w dół już w położeniu początkowym
+             * i zasłania pierwszy wiersz. W widoku ładowanym przez index.html
+             * nagłówki pozostają więc w normalnym przepływie dokumentu.
+             */
+            .table-wrap thead th {
+                position: static !important;
+                top: auto !important;
             }
 
             @media (pointer: coarse) {
@@ -108,9 +124,7 @@
                     height: 28px;
                 }
 
-                .check-label {
-                    min-height: 42px;
-                }
+                .check-label { min-height: 42px; }
 
                 .search,
                 .reset-button,
@@ -156,13 +170,9 @@
                 }
 
                 .search,
-                .reset-button {
-                    min-height: 48px;
-                }
+                .reset-button { min-height: 48px; }
 
-                .progress-track {
-                    height: 12px;
-                }
+                .progress-track { height: 12px; }
 
                 .progress-text {
                     min-width: 104px;
@@ -185,14 +195,10 @@
                     font-size: .9rem;
                 }
 
-                .overview {
-                    margin: 14px 0 24px;
-                }
+                .overview { margin: 14px 0 24px; }
 
                 .overview h2,
-                .reference-intro h2 {
-                    margin: 12px 0;
-                }
+                .reference-intro h2 { margin: 12px 0; }
 
                 .overview-grid {
                     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -231,29 +237,18 @@
                     line-height: 1.48;
                 }
 
-                .table-wrap {
-                    border-radius: 11px;
-                }
+                .table-wrap { border-radius: 11px; }
 
                 th,
-                td {
-                    padding: 14px 12px;
-                }
+                td { padding: 14px 12px; }
 
-                th {
-                    top: 70px;
-                    font-size: .8rem;
-                }
+                th { font-size: .8rem; }
 
                 .step-head,
-                .step-cell {
-                    width: 104px;
-                }
+                .step-cell { width: 104px; }
 
                 .location-head,
-                .location {
-                    width: 230px;
-                }
+                .location { width: 230px; }
 
                 .progress-check {
                     width: 28px;
@@ -265,9 +260,7 @@
                     min-height: 38px;
                 }
 
-                .step-number {
-                    font-size: 1rem;
-                }
+                .step-number { font-size: 1rem; }
 
                 .location,
                 .instruction {
@@ -292,9 +285,7 @@
                 }
 
                 .location-head,
-                .location {
-                    width: 205px;
-                }
+                .location { width: 205px; }
             }
         `;
 
@@ -319,7 +310,7 @@
             });
         }
 
-        async function getSavedProgress(database) {
+        function getSavedProgress(database) {
             return new Promise((resolve, reject) => {
                 const transaction = database.transaction(storeName, "readonly");
                 const request = transaction.objectStore(storeName).getAll();
@@ -328,7 +319,7 @@
             });
         }
 
-        async function saveProgress(database, key, checked) {
+        function saveProgress(database, key, checked) {
             return new Promise((resolve, reject) => {
                 const transaction = database.transaction(storeName, "readwrite");
                 transaction.objectStore(storeName).put({
@@ -342,7 +333,7 @@
             });
         }
 
-        async function replaceProgress(database, checks) {
+        function replaceProgress(database, checks) {
             return new Promise((resolve, reject) => {
                 const transaction = database.transaction(storeName, "readwrite");
                 const store = transaction.objectStore(storeName);
@@ -381,7 +372,9 @@
             try {
                 guideWindow = frame.contentWindow;
                 guideDocument = frame.contentDocument;
-                if (!guideWindow || !guideDocument) throw new Error("Guide document is unavailable");
+                if (!guideWindow || !guideDocument) {
+                    throw new Error("Guide document is unavailable");
+                }
             } catch (error) {
                 console.warn("Cannot enhance DS2.html in this context:", error);
                 loadingState.hidden = true;
@@ -403,7 +396,9 @@
                 const savedRecords = await getSavedProgress(database);
 
                 if (savedRecords.length) {
-                    const savedByKey = new Map(savedRecords.map(record => [record.key, Boolean(record.checked)]));
+                    const savedByKey = new Map(
+                        savedRecords.map(record => [record.key, Boolean(record.checked)])
+                    );
                     checks.forEach(check => {
                         if (savedByKey.has(check.dataset.key)) {
                             synchronizeCheckbox(check, savedByKey.get(check.dataset.key));
