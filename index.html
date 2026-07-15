@@ -342,6 +342,24 @@
             });
         }
 
+        async function replaceProgress(database, checks) {
+            return new Promise((resolve, reject) => {
+                const transaction = database.transaction(storeName, "readwrite");
+                const store = transaction.objectStore(storeName);
+                store.clear();
+                checks.filter(check => check.checked).forEach(check => {
+                    store.put({
+                        key: check.dataset.key,
+                        checked: true,
+                        updatedAt: Date.now()
+                    });
+                });
+                transaction.oncomplete = () => resolve();
+                transaction.onerror = () => reject(transaction.error || new Error("Cannot replace progress"));
+                transaction.onabort = () => reject(transaction.error || new Error("Progress replacement aborted"));
+            });
+        }
+
         function injectTabletStyles(documentRef) {
             if (documentRef.getElementById("tablet-landscape-overrides")) return;
             const style = documentRef.createElement("style");
@@ -408,6 +426,17 @@
                     console.warn("Cannot save checkbox state in IndexedDB:", error);
                 });
             }, true);
+
+            const resetButton = guideDocument.getElementById("resetButton");
+            if (resetButton && database) {
+                resetButton.addEventListener("click", () => {
+                    window.setTimeout(() => {
+                        replaceProgress(database, checks).catch(error => {
+                            console.warn("Cannot synchronize progress after reset:", error);
+                        });
+                    }, 0);
+                });
+            }
 
             loadingState.hidden = true;
         }
