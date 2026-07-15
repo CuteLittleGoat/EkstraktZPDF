@@ -1,0 +1,12 @@
+{
+    "name": "Dark Souls II — 100% Achievement Checklist",
+    "short_name": "DS2 Checklist",
+    "description": "Interaktywna checklista przejścia Dark Souls II: Scholar of the First Sin.",
+    "lang": "pl",
+    "start_url": "./index.html",
+    "scope": "./",
+    "display": "standalone",
+    "orientation": "landscape",
+    "background_color": "#0b0d10",
+    "theme_color": "#0b0d10"
+}
