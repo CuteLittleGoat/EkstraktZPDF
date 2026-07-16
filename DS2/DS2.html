@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0b0d10">
+    <meta name="description" content="Dark Souls II: Scholar of the First Sin — interaktywna checklista 100%.">
+    <title>Dark Souls II — 100% Achievement Checklist</title>
+    <link rel="manifest" href="manifest.webmanifest">
+    <style>
+        :root {
+            color-scheme: dark;
+            background: #0b0d10;
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        * { box-sizing: border-box; }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            background: #0b0d10;
+        }
+
+        #guideFrame {
+            display: block;
+            width: 100%;
+            height: 100%;
+            border: 0;
+            background: #0b0d10;
+        }
+
+        .loading {
+            position: fixed;
+            inset: 0;
+            z-index: 2;
+            display: grid;
+            place-items: center;
+            padding: 24px;
+            background: #0b0d10;
+            color: #d7d2ca;
+            text-align: center;
+            transition: opacity .18s ease, visibility .18s ease;
+        }
+
+        .loading[hidden] {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .loading strong {
+            display: block;
+            margin-bottom: 8px;
+            color: #d1a85a;
+            font-family: Georgia, "Times New Roman", serif;
+            font-size: 1.35rem;
+        }
+
+        .loading p {
+            margin: 0;
+            color: #a39f98;
+        }
+
+        .loading a { color: #d1a85a; }
+    </style>
+</head>
+<body>
+    <div class="loading" id="loadingState" role="status" aria-live="polite">
+        <div>
+            <strong>Wczytywanie checklisty…</strong>
+            <p>W razie problemu otwórz bezpośrednio <a href="DS2.html">DS2.html</a>.</p>
+        </div>
+    </div>
+
+    <iframe id="guideFrame" src="DS2.html" title="Dark Souls II — checklista 100%"></iframe>
+
+    <script>
+    (() => {
+        "use strict";
+
+        const frame = document.getElementById("guideFrame");
+        const loadingState = document.getElementById("loadingState");
+        const storagePrefix = "ds2-sotfs-checklist:";
+        const databaseName = "ds2-sotfs-checklist";
+        const storeName = "progress";
+
+        const tabletStyles = `
+            html {
+                -webkit-text-size-adjust: 100%;
+                scroll-padding-top: 92px;
+            }
+
+            body {
+                min-height: 100%;
+                overscroll-behavior-y: contain;
+                touch-action: pan-x pan-y;
+            }
+
+            button,
+            input,
+            a {
+                -webkit-tap-highlight-color: rgba(209, 168, 90, .22);
+            }
+
+            /*
+             * DS2.html ustawia nagłówki tabel jako sticky z top: 70px.
+             * Ponieważ tabela znajduje się w kontenerze z overflow-x: auto,
+             * nagłówek jest przesuwany w dół już w położeniu początkowym
+             * i zasłania pierwszy wiersz. W widoku ładowanym przez index.html
+             * nagłówki pozostają więc w normalnym przepływie dokumentu.
+             */
+            .table-wrap thead th {
+                position: static !important;
+                top: auto !important;
+            }
+
+            @media (pointer: coarse) {
+                .progress-check {
+                    width: 28px;
+                    height: 28px;
+                }
+
+                .check-label { min-height: 42px; }
+
+                .search,
+                .reset-button,
+                .jump-nav a {
+                    min-height: 48px;
+                }
+            }
+
+            @media (orientation: landscape) and (min-width: 900px) and (max-width: 1400px) {
+                body {
+                    font-size: 16px;
+                    line-height: 1.58;
+                }
+
+                .page-shell {
+                    width: calc(100% - 22px);
+                    padding: max(12px, env(safe-area-inset-top)) max(0px, env(safe-area-inset-right)) max(36px, env(safe-area-inset-bottom)) max(0px, env(safe-area-inset-left));
+                }
+
+                .hero {
+                    padding: 18px 22px;
+                    border-radius: 14px;
+                }
+
+                .hero h1 {
+                    margin-bottom: 7px;
+                    font-size: clamp(1.9rem, 3vw, 2.65rem);
+                }
+
+                .hero p {
+                    max-width: none;
+                    font-size: .96rem;
+                    line-height: 1.45;
+                }
+
+                .toolbar {
+                    top: env(safe-area-inset-top);
+                    grid-template-columns: minmax(300px, 1.25fr) minmax(260px, .75fr) auto;
+                    gap: 10px;
+                    margin: 10px 0 8px;
+                    padding: 10px;
+                    border-radius: 12px;
+                }
+
+                .search,
+                .reset-button { min-height: 48px; }
+
+                .progress-track { height: 12px; }
+
+                .progress-text {
+                    min-width: 104px;
+                    font-size: .95rem;
+                }
+
+                .jump-nav {
+                    gap: 8px;
+                    padding: 2px 0 9px;
+                    scroll-padding-inline: 8px;
+                    scroll-snap-type: x proximity;
+                }
+
+                .jump-nav a {
+                    display: inline-flex;
+                    align-items: center;
+                    min-height: 44px;
+                    padding: 9px 13px;
+                    scroll-snap-align: start;
+                    font-size: .9rem;
+                }
+
+                .overview { margin: 14px 0 24px; }
+
+                .overview h2,
+                .reference-intro h2 { margin: 12px 0; }
+
+                .overview-grid {
+                    grid-template-columns: repeat(4, minmax(0, 1fr));
+                    gap: 8px;
+                }
+
+                .overview-card {
+                    padding: 10px 12px;
+                    font-size: .92rem;
+                    line-height: 1.4;
+                }
+
+                .content-section {
+                    scroll-margin-top: 92px;
+                    margin: 20px 0 34px;
+                }
+
+                .section-heading {
+                    gap: 14px;
+                    margin-bottom: 10px;
+                }
+
+                .section-heading h2 {
+                    font-size: clamp(1.45rem, 2.4vw, 2rem);
+                }
+
+                .section-counter {
+                    padding: 7px 11px;
+                    font-size: .95rem;
+                }
+
+                .sequence-summary {
+                    margin-bottom: 10px;
+                    padding: 12px 14px;
+                    font-size: .94rem;
+                    line-height: 1.48;
+                }
+
+                .table-wrap { border-radius: 11px; }
+
+                th,
+                td { padding: 14px 12px; }
+
+                th { font-size: .8rem; }
+
+                .step-head,
+                .step-cell { width: 104px; }
+
+                .location-head,
+                .location { width: 230px; }
+
+                .progress-check {
+                    width: 28px;
+                    height: 28px;
+                }
+
+                .check-label {
+                    gap: 10px;
+                    min-height: 38px;
+                }
+
+                .step-number { font-size: 1rem; }
+
+                .location,
+                .instruction {
+                    font-size: 1rem;
+                    line-height: 1.58;
+                }
+
+                .reference-intro {
+                    margin-top: 44px;
+                    padding-top: 22px;
+                }
+
+                .footer {
+                    margin-top: 38px;
+                    padding-bottom: env(safe-area-inset-bottom);
+                }
+            }
+
+            @media (orientation: landscape) and (min-width: 900px) and (max-width: 1080px) {
+                .overview-grid {
+                    grid-template-columns: repeat(3, minmax(0, 1fr));
+                }
+
+                .location-head,
+                .location { width: 205px; }
+            }
+        `;
+
+        function openDatabase() {
+            return new Promise((resolve, reject) => {
+                if (!("indexedDB" in window)) {
+                    reject(new Error("IndexedDB is unavailable"));
+                    return;
+                }
+
+                const request = indexedDB.open(databaseName, 1);
+
+                request.onupgradeneeded = () => {
+                    const database = request.result;
+                    if (!database.objectStoreNames.contains(storeName)) {
+                        database.createObjectStore(storeName, { keyPath: "key" });
+                    }
+                };
+
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error || new Error("Cannot open IndexedDB"));
+            });
+        }
+
+        function getSavedProgress(database) {
+            return new Promise((resolve, reject) => {
+                const transaction = database.transaction(storeName, "readonly");
+                const request = transaction.objectStore(storeName).getAll();
+                request.onsuccess = () => resolve(request.result || []);
+                request.onerror = () => reject(request.error || new Error("Cannot read progress"));
+            });
+        }
+
+        function saveProgress(database, key, checked) {
+            return new Promise((resolve, reject) => {
+                const transaction = database.transaction(storeName, "readwrite");
+                transaction.objectStore(storeName).put({
+                    key,
+                    checked,
+                    updatedAt: Date.now()
+                });
+                transaction.oncomplete = () => resolve();
+                transaction.onerror = () => reject(transaction.error || new Error("Cannot save progress"));
+                transaction.onabort = () => reject(transaction.error || new Error("Progress save aborted"));
+            });
+        }
+
+        function replaceProgress(database, checks) {
+            return new Promise((resolve, reject) => {
+                const transaction = database.transaction(storeName, "readwrite");
+                const store = transaction.objectStore(storeName);
+                store.clear();
+                checks.filter(check => check.checked).forEach(check => {
+                    store.put({
+                        key: check.dataset.key,
+                        checked: true,
+                        updatedAt: Date.now()
+                    });
+                });
+                transaction.oncomplete = () => resolve();
+                transaction.onerror = () => reject(transaction.error || new Error("Cannot replace progress"));
+                transaction.onabort = () => reject(transaction.error || new Error("Progress replacement aborted"));
+            });
+        }
+
+        function injectTabletStyles(documentRef) {
+            if (documentRef.getElementById("tablet-landscape-overrides")) return;
+            const style = documentRef.createElement("style");
+            style.id = "tablet-landscape-overrides";
+            style.textContent = tabletStyles;
+            documentRef.head.appendChild(style);
+        }
+
+        function synchronizeCheckbox(check, checked) {
+            if (check.checked === checked) return;
+            check.checked = checked;
+            check.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+
+        async function enhanceGuide() {
+            let guideWindow;
+            let guideDocument;
+
+            try {
+                guideWindow = frame.contentWindow;
+                guideDocument = frame.contentDocument;
+                if (!guideWindow || !guideDocument) {
+                    throw new Error("Guide document is unavailable");
+                }
+            } catch (error) {
+                console.warn("Cannot enhance DS2.html in this context:", error);
+                loadingState.hidden = true;
+                return;
+            }
+
+            injectTabletStyles(guideDocument);
+
+            const checks = Array.from(guideDocument.querySelectorAll(".progress-check"));
+            if (!checks.length) {
+                loadingState.hidden = true;
+                return;
+            }
+
+            let database = null;
+
+            try {
+                database = await openDatabase();
+                const savedRecords = await getSavedProgress(database);
+
+                if (savedRecords.length) {
+                    const savedByKey = new Map(
+                        savedRecords.map(record => [record.key, Boolean(record.checked)])
+                    );
+                    checks.forEach(check => {
+                        if (savedByKey.has(check.dataset.key)) {
+                            synchronizeCheckbox(check, savedByKey.get(check.dataset.key));
+                        }
+                    });
+                } else {
+                    const migrationTasks = checks
+                        .filter(check => guideWindow.localStorage.getItem(storagePrefix + check.dataset.key) === "1")
+                        .map(check => saveProgress(database, check.dataset.key, true));
+                    await Promise.all(migrationTasks);
+                }
+            } catch (error) {
+                console.warn("IndexedDB persistence is unavailable; localStorage remains active:", error);
+            }
+
+            guideDocument.addEventListener("change", event => {
+                const check = event.target.closest?.(".progress-check");
+                if (!check || !database) return;
+                saveProgress(database, check.dataset.key, check.checked).catch(error => {
+                    console.warn("Cannot save checkbox state in IndexedDB:", error);
+                });
+            }, true);
+
+            const resetButton = guideDocument.getElementById("resetButton");
+            if (resetButton && database) {
+                resetButton.addEventListener("click", () => {
+                    window.setTimeout(() => {
+                        replaceProgress(database, checks).catch(error => {
+                            console.warn("Cannot synchronize progress after reset:", error);
+                        });
+                    }, 0);
+                });
+            }
+
+            loadingState.hidden = true;
+        }
+
+        frame.addEventListener("load", () => {
+            enhanceGuide().catch(error => {
+                console.error("Guide enhancement failed:", error);
+                loadingState.hidden = true;
+            });
+        });
+
+        if ("serviceWorker" in navigator && window.isSecureContext) {
+            window.addEventListener("load", () => {
+                navigator.serviceWorker.register("sw.js").catch(error => {
+                    console.warn("Service worker registration failed:", error);
+                });
+            });
+        }
+    })();
+    </script>
+</body>
+</html>
