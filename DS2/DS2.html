@@ -65,72 +65,9 @@
 
         const sourceUrl = "https://raw.githubusercontent.com/CuteLittleGoat/EkstraktZPDF/8e8b23f1ad9d8f0669ffa33c5c703500dc0dd931/DS2.html";
         const status = document.getElementById("status");
-
-        const runtime = `<script>
-(() => {
-    const checks = Array.from(document.querySelectorAll(".progress-check"));
-    const rows = Array.from(document.querySelectorAll(".check-row"));
-    const searchBox = document.getElementById("searchBox");
-    const progressText = document.getElementById("progressText");
-    const progressFill = document.getElementById("progressFill");
-    const resetButton = document.getElementById("resetButton");
-
-    function applyRowState(check) {
-        const row = check.closest(".check-row");
-        if (row) row.classList.toggle("done", check.checked);
-    }
-
-    function updateProgress() {
-        const completed = checks.filter(check => check.checked).length;
-        const percent = checks.length ? (completed / checks.length) * 100 : 0;
-        progressText.textContent = \`\${completed} / \${checks.length}\`;
-        progressFill.style.width = \`\${percent}%\`;
-
-        document.querySelectorAll(".content-section").forEach(section => {
-            const sectionChecks = Array.from(section.querySelectorAll(".progress-check"));
-            const sectionDone = sectionChecks.filter(check => check.checked).length;
-            const counter = section.querySelector(".section-counter");
-            if (counter) counter.textContent = \`\${sectionDone} / \${sectionChecks.length}\`;
-        });
-    }
-
-    checks.forEach(check => {
-        check.checked = false;
-        applyRowState(check);
-
-        check.addEventListener("change", () => {
-            applyRowState(check);
-            updateProgress();
-        });
-    });
-
-    searchBox.addEventListener("input", () => {
-        const query = searchBox.value.trim().toLocaleLowerCase("pl");
-        rows.forEach(row => {
-            const haystack = row.dataset.search || row.textContent.toLocaleLowerCase("pl");
-            row.classList.toggle("filtered-out", query && !haystack.includes(query));
-        });
-
-        document.querySelectorAll(".content-section").forEach(section => {
-            const visibleRows = section.querySelectorAll(".check-row:not(.filtered-out)").length;
-            section.style.display = visibleRows || !query ? "" : "none";
-        });
-    });
-
-    resetButton.addEventListener("click", () => {
-        const confirmed = window.confirm("Czy na pewno wyczyścić wszystkie zaznaczenia?");
-        if (!confirmed) return;
-
-        checks.forEach(check => {
-            check.checked = false;
-            applyRowState(check);
-        });
-        updateProgress();
-    });
-
-    updateProgress();
-})();
-<\/script>`;
+        const firebaseRuntime = `
+<script src="firebase-config.js"><\/script>
+<script type="module" src="firebase-sync.js"><\/script>`;
 
         fetch(sourceUrl, { cache: "no-store" })
             .then(response => {
@@ -147,14 +84,18 @@
                     throw new Error("Nieprawidłowa struktura źródłowej checklisty");
                 }
 
-                let cleaned = source.slice(0, scriptStart) + runtime + "\n" + source.slice(bodyEnd);
+                let cleaned = source.slice(0, scriptStart) + firebaseRuntime + "\n" + source.slice(bodyEnd);
                 cleaned = cleaned.replace(
                     "Treść instrukcji została zachowana w oryginalnym języku i ułożona w tabele. Zaznaczenie checkboxa przekreśla cały krok, zmienia tekst na szary i pochyły. Postęp jest zapisywany lokalnie w tej przeglądarce.",
-                    "Treść instrukcji została zachowana w oryginalnym języku i ułożona w tabele. Zaznaczenie checkboxa przekreśla cały krok, zmienia tekst na szary i pochyły."
+                    "Treść instrukcji została zachowana w oryginalnym języku i ułożona w tabele. Stan checkboxów jest synchronizowany między urządzeniami przez Firebase."
                 );
                 cleaned = cleaned.replace(
                     "JavaScript jest wyłączony. Checkboxy będą widoczne, ale postęp nie będzie zapisywany i wiersze nie będą automatycznie formatowane.",
-                    "JavaScript jest wyłączony. Checkboxy będą widoczne, ale wiersze nie będą automatycznie formatowane."
+                    "JavaScript jest wyłączony. Synchronizacja postępu i automatyczne formatowanie wierszy nie będą działały."
+                );
+                cleaned = cleaned.replace(
+                    "Jeden samodzielny plik HTML. Wszystkie style i skrypty są osadzone w dokumencie; połączenie z internetem nie jest wymagane.",
+                    "Stan checklisty jest przechowywany w dokumencie Firebase DS2/progress i synchronizowany w czasie rzeczywistym."
                 );
 
                 document.open();
